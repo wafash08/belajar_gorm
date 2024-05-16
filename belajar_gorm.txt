@@ -1,0 +1,4 @@
+# raw sql
+
+- query menggunakan method Raw(sql) di gorm.DB
+- manipulasi menggunakan method Exec(sql) di gorm.DB
