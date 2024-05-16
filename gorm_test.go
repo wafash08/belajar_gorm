@@ -374,3 +374,45 @@ func TestQueryNonModel(t *testing.T) {
 		fmt.Println("user >> ", user)
 	}
 }
+
+// Save mengubah secara keseluruhan
+func TestUpdate(t *testing.T) {
+	user := User{}
+	err := db.Take(&user, "id = ?", "1").Error
+	assert.Nil(t, err)
+
+	// melakukan update
+	user.Name.FirstName = "Budi"
+	user.Name.MiddleName = ""
+	user.Name.LastName = "Nugraha"
+	user.Password = "rahasia123"
+
+	// menyimpan hasil update
+	// method Save akan mengubah semua kolom
+	err = db.Save(&user).Error
+	assert.Nil(t, err)
+}
+
+// Update/Updates mengubah secara parsial
+func TestUpdateSelectedColumns(t *testing.T) {
+	// Updates => mengubah beberapa kolom
+	// jika menggunakan map maka "" (string kosong) akan dianggap sebagai perubahan juga
+	err := db.Model(&User{}).Where("id = ?", "1").Updates(map[string]interface{}{
+		"middle_name": "",
+		"last_name":   "Morro",
+	}).Error
+	assert.Nil(t, err)
+
+	// Update => mengubah satu kolom
+	err = db.Model(&User{}).Where("id = ?", "1").Update("password", "diubahlagi").Error
+	assert.Nil(t, err)
+
+	// jika menggunakan struct maka "" (string kosong) tidak dianggap sebagai perubahan
+	err = db.Where("id = ?", "1").Updates(User{
+		Name: Name{
+			FirstName: "Eko",
+			LastName:  "Khannedy",
+		},
+	}).Error
+	assert.Nil(t, err)
+}
