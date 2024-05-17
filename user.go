@@ -41,3 +41,15 @@ type Name struct {
 }
 
 // lalu sisipkan ke field
+
+type UserLog struct {
+	ID        int       `gorm:"primaryKey;column:id;autoIncrement"`
+	UserId    string    `gorm:"column:user_id"`
+	Action    string    `gorm:"column:action"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
+}
+
+func (l *UserLog) TableName() string {
+	return "user_logs"
+}
