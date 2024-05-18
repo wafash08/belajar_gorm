@@ -479,3 +479,62 @@ func TestConflict(t *testing.T) {
 	err := db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&user).Error // insert
 	assert.Nil(t, err)
 }
+
+func TestDelete(t *testing.T) {
+	var user User
+	// ambil data terlebih dahulu
+	err := db.Take(&user, "id = ?", "88").Error
+	assert.Nil(t, err)
+	// lalu hapus
+	err = db.Delete(&user).Error
+	assert.Nil(t, err)
+
+	// hapus menggunakan inline condition
+	err = db.Delete(&User{}, "id = ?", "99").Error
+	assert.Nil(t, err)
+
+	err = db.Where("id = ?", "77").Delete(&User{}).Error
+	assert.Nil(t, err)
+}
+
+func TestSoftDelete(t *testing.T) {
+	todo := Todo{
+		UserId:      "1",
+		Title:       "Todo 1",
+		Description: "Description 1",
+	}
+	err := db.Create(&todo).Error
+	assert.Nil(t, err)
+
+	// UPDATE "todos" SET "deleted_at"='2024-05-18 14:15:32.083' WHERE "todos"."id" = 1 AND "todos"."deleted_at" IS NULL
+	// tidak melakukan query DELETE
+	// tapi hanya mengubah kolom deleted_at
+	err = db.Delete(&todo).Error
+	assert.Nil(t, err)
+	assert.NotNil(t, todo.DeletedAt)
+
+	// SELECT * FROM "todos" WHERE "todos"."deleted_at" IS NULL
+	var todos []Todo
+	err = db.Find(&todos).Error
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(todos))
+}
+
+func TestUnscoped(t *testing.T) {
+	var todo Todo
+	//  SELECT * FROM "todos" WHERE id = 1 ORDER BY "todos"."id" LIMIT 1
+	// method Unscoped menjadikan query yang dilakukan
+	// tidak menyertakan kondisi kolom deleted_at
+	err := db.Unscoped().First(&todo, "id = ?", 1).Error
+	assert.Nil(t, err)
+	fmt.Println(todo)
+
+	// DELETE FROM "todos" WHERE "todos"."id" = 1
+	err = db.Unscoped().Delete(&todo).Error
+	assert.Nil(t, err)
+
+	// SELECT * FROM "todos"
+	var todos []Todo
+	err = db.Unscoped().Find(&todos).Error
+	assert.Nil(t, err)
+}
