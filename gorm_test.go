@@ -538,3 +538,21 @@ func TestUnscoped(t *testing.T) {
 	err = db.Unscoped().Find(&todos).Error
 	assert.Nil(t, err)
 }
+
+func TestLock(t *testing.T) {
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var user User
+		// locking for UPDATE
+		// SELECT * FROM "users" WHERE id = '1' LIMIT 1 FOR UPDATE
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Take(&user, "id = ?", "1").Error
+		if err != nil {
+			return err
+		}
+
+		user.Name.FirstName = "Joko"
+		user.Name.LastName = "Morro"
+		err = tx.Save(&user).Error
+		return err
+	})
+	assert.Nil(t, err)
+}
