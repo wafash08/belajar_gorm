@@ -37,3 +37,16 @@ create table todos
     deleted_at  timestamp    null,
     primary key (id)
 ) engine = innodb;
+
+create table wallets
+(
+    id         varchar(100) not null,
+    user_id    varchar(100) not null,
+    balance    bigint       not null,
+    created_at timestamp    not null default current_timestamp,
+    updated_at timestamp    not null default current_timestamp,
+    primary key (id),
+    -- user_id berperan sebagai foreig key yang merujuk (references) pada kolom id di table users
+    foreign key (user_id) references users (id)
+    unique (user_id)
+);

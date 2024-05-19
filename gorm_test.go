@@ -556,3 +556,83 @@ func TestLock(t *testing.T) {
 	})
 	assert.Nil(t, err)
 }
+
+func TestCreateWallet(t *testing.T) {
+	wallet := Wallet{
+		ID:      "1",
+		UserId:  "1",
+		Balance: 1000000,
+	}
+
+	err := db.Create(&wallet).Error
+	assert.Nil(t, err)
+}
+
+func TestRetrieveRelation(t *testing.T) {
+	var user User
+	// method Preload => melakukan query terhadap relation
+	// Preload akan menjalan dua query, pertama ke tabel users lalu kedua ke tabel wallets
+	// SELECT * FROM "wallets" WHERE "wallets"."user_id" = '1'
+	// SELECT * FROM "users" WHERE id = '1' LIMIT 1
+	// dan ini sebenarnya cocok untuk relasi one to many dan relasi many to many
+	err := db.Model(&User{}).Preload("Wallet").Take(&user, "id = ?", "1").Error
+	assert.Nil(t, err)
+
+	fmt.Println("user > ", user)
+	assert.Equal(t, "1", user.ID)
+	assert.Equal(t, "1", user.Wallet.ID)
+}
+
+func TestRetrieveRelationJoin(t *testing.T) {
+	var user User
+	// method Joins cocok untuk relasi one to one
+	// Join hanya melakukan satu query
+	//  SELECT "users"."id","users"."password","users"."first_name","users"."middle_name","users"."last_name","users"."created_at","users"."updated_at","Wallet"."id" AS "Wallet__id","Wallet"."user_id" AS "Wallet__user_id","Wallet"."balance" AS "Wallet__balance","Wallet"."created_at" AS "Wallet__created_at","Wallet"."updated_at" AS "Wallet__updated_at" FROM "users" LEFT JOIN "wallets" "Wallet" ON "users"."id" = "Wallet"."user_id" WHERE users.id = '1' LIMIT 1
+	err := db.Model(&User{}).Joins("Wallet").Take(&user, "users.id = ?", "1").Error
+	assert.Nil(t, err)
+
+	fmt.Println("user > ", user)
+	assert.Equal(t, "1", user.ID)
+	assert.Equal(t, "1", user.Wallet.ID)
+}
+
+func TestAutoCreateUpdate(t *testing.T) {
+	user := User{
+		ID:       "20",
+		Password: "rahasia",
+		Name: Name{
+			FirstName: "User 20",
+		},
+		Wallet: Wallet{
+			ID:      "20",
+			UserId:  "20",
+			Balance: 1000000,
+		},
+	}
+
+	// query yg dihasilkan
+	// INSERT INTO "wallets" ("id","user_id","balance","created_at","updated_at") VALUES ('20','20',1000000,'2024-05-18 23:22:14.407','2024-05-18 23:22:14.407') ON CONFLICT ("id") DO UPDATE SET "user_id"="excluded"."user_id"
+	// INSERT INTO "users" ("id","password","first_name","middle_name","last_name","created_at","updated_at") VALUES ('20','rahasia','User 20','','','2024-05-18 23:22:14.396','2024-05-18 23:22:14.396')
+	err := db.Create(&user).Error
+	assert.Nil(t, err)
+}
+
+func TestSkipAutoCreateUpdate(t *testing.T) {
+	user := User{
+		ID:       "21",
+		Password: "rahasia",
+		Name: Name{
+			FirstName: "User 21",
+		},
+		Wallet: Wallet{
+			ID:      "21",
+			UserId:  "21",
+			Balance: 1000000,
+		},
+	}
+
+	// digunakan untuk mengabaikan pembuatan kolom relasi
+	// INSERT INTO "users" ("id","password","first_name","middle_name","last_name","created_at","updated_at") VALUES ('21','rahasia','User 21','','','2024-05-19 08:16:31.115','2024-05-19 08:16:31.115')
+	err := db.Omit(clause.Associations).Create(&user).Error
+	assert.Nil(t, err)
+}
