@@ -636,3 +636,82 @@ func TestSkipAutoCreateUpdate(t *testing.T) {
 	err := db.Omit(clause.Associations).Create(&user).Error
 	assert.Nil(t, err)
 }
+
+func TestUserAndAddresses(t *testing.T) {
+	user := User{
+		ID:       "2",
+		Password: "rahasia",
+		Name: Name{
+			FirstName: "User 50",
+		},
+		Wallet: Wallet{
+			ID:      "2",
+			UserId:  "2",
+			Balance: 1000000,
+		},
+		Addresses: []Address{
+			{
+				UserId:  "2",
+				Address: "Jalan A",
+			},
+			{
+				UserId:  "2",
+				Address: "Jalan B",
+			},
+		},
+	}
+
+	// INSERT INTO "wallets" ("id","user_id","balance","created_at","updated_at") VALUES ('2','2',1000000,'2024-05-19 08:39:09.697','2024-05-19 08:39:09.697') ON CONFLICT ("id") DO UPDATE SET "user_id"="excluded"."user_id"
+	// INSERT INTO "addresses" ("user_id","address","created_at","updated_at") VALUES ('2','Jalan A','2024-05-19 08:39:09.711','2024-05-19 08:39:09.711'),('2','Jalan B','2024-05-19 08:39:09.711','2024-05-19 08:39:09.711') ON CONFLICT ("id") DO UPDATE SET "user_id"="excluded"."user_id" RETURNING "id"
+	// UPDATE "users" SET "password"='rahasia',"first_name"='User 50',"middle_name"='',"last_name"='',"updated_at"='2024-05-19 08:39:09.682' WHERE "id" = '2'
+	err := db.Save(&user).Error
+	assert.Nil(t, err)
+}
+
+func TestPreloadJoinOneToMany(t *testing.T) {
+	var users []User
+	// SELECT * FROM "addresses" WHERE "addresses"."user_id" IN ('1','20','2','10','7','6','8','4','11','99','12','3','5','21','14','13','9')
+	// SELECT "users"."id","users"."password","users"."first_name","users"."middle_name","users"."last_name","users"."created_at","users"."updated_at","Wallet"."id" AS "Wallet__id","Wallet"."user_id" AS "Wallet__user_id","Wallet"."balance" AS "Wallet__balance","Wallet"."created_at" AS "Wallet__created_at","Wallet"."updated_at" AS "Wallet__updated_at" FROM "users" LEFT JOIN "wallets" "Wallet" ON "users"."id" = "Wallet"."user_id"
+	err := db.Model(&User{}).Preload("Addresses").Joins("Wallet").Find(&users).Error
+	assert.Nil(t, err)
+}
+
+func TestTakePreloadJoinOneToMany(t *testing.T) {
+	var user User
+	// di sini Preload digunakan untuk relasi one to many
+	// dan Joins digunakan untuk relasi one to one
+	err := db.Model(&User{}).Preload("Addresses").Joins("Wallet").
+		Take(&user, "users.id = ?", "2").Error
+	assert.Nil(t, err)
+}
+
+func TestBelongsTo(t *testing.T) {
+	fmt.Println("Preload")
+	var addresses []Address
+	// SELECT * FROM "users" WHERE "users"."id" = '2'
+	err := db.Model(&Address{}).Preload("User").Find(&addresses).Error
+	assert.Nil(t, err)
+	// assert.Equal(t, 4, len(addresses))
+
+	fmt.Println("Joins")
+	addresses = []Address{}
+	// SELECT "addresses"."id","addresses"."user_id","addresses"."address","addresses"."created_at","addresses"."updated_at","User"."id" AS "User__id","User"."password" AS "User__password","User"."first_name" AS "User__first_name","User"."middle_name" AS "User__middle_name","User"."last_name" AS "User__last_name","User"."created_at" AS "User__created_at","User"."updated_at" AS "User__updated_at" FROM "addresses" LEFT JOIN "users" "User" ON "addresses"."user_id" = "User"."id"
+	err = db.Model(&Address{}).Joins("User").Find(&addresses).Error
+	assert.Nil(t, err)
+	// assert.Equal(t, 4, len(addresses))
+}
+
+func TestBelongsToWallet(t *testing.T) {
+	fmt.Println("Preload")
+	var wallets []Wallet
+	// SELECT * FROM "users" WHERE "users"."id" IN ('1','20','2')
+	// SELECT * FROM "wallets"
+	err := db.Model(&Wallet{}).Preload("User").Find(&wallets).Error
+	assert.Nil(t, err)
+
+	fmt.Println("Joins")
+	wallets = []Wallet{}
+	// SELECT "wallets"."id","wallets"."user_id","wallets"."balance","wallets"."created_at","wallets"."updated_at","User"."id" AS "User__id","User"."password" AS "User__password","User"."first_name" AS "User__first_name","User"."middle_name" AS "User__middle_name","User"."last_name" AS "User__last_name","User"."created_at" AS "User__created_at","User"."updated_at" AS "User__updated_at" FROM "wallets" LEFT JOIN "users" "User" ON "wallets"."user_id" = "User"."id"
+	err = db.Model(&Wallet{}).Joins("User").Find(&wallets).Error
+	assert.Nil(t, err)
+}

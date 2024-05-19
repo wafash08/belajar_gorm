@@ -10,7 +10,8 @@ type User struct {
 	UpdatedAt   time.Time `gorm:"column:updated_at;autoCreateTime;autoUpdateTime"` // tidak perlu ditambahkan autoCreateTime dan autoUpdateTime
 	Information string    `gorm:"-"`
 	Wallet      Wallet    `gorm:"foreignKey:user_id;references:id"`
-	// foreignKey merujuk kolom yang dijadikan sebagai foreign key yang ada di tabel wallet
+	Addresses   []Address `gorm:"foreignKey:user_id;references:id"`
+	// foreignKey merujuk kolom yang dijadikan sebagai foreign key yang ada di tabel relasi yaitu wallet dan addresses
 	// references merujuk pada kolom id pada tabel saat ini yaitu tabel user
 }
 

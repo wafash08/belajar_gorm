@@ -50,3 +50,14 @@ create table wallets
     foreign key (user_id) references users (id)
     unique (user_id)
 );
+
+create table addresses
+(
+    id         serial       not null,
+    user_id    varchar(100) not null,
+    address    varchar(100) not null,
+    created_at timestamp    not null default current_timestamp,
+    updated_at timestamp    not null default current_timestamp,
+    primary key (id),
+    foreign key (user_id) references users (id)
+);
